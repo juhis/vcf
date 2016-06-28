@@ -1,0 +1,26 @@
+{
+  "name": "vcf",
+  "version": "0.0.1",
+  "description": "VCF filtering and gene prioritization",
+  "main": "filterVCF.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/juhis/vcf.git"
+  },
+  "keywords": [
+    "vcf",
+    "filtering"
+  ],
+  "author": "Juha Karjalainen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/juhis/vcf/issues"
+  },
+  "homepage": "https://github.com/juhis/vcf#readme",
+  "dependencies": {
+    "lodash": "^4.13.1"
+  }
+}
