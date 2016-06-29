@@ -26,10 +26,13 @@ module.exports = {
     exacMaf: 0.02,
     
     // which SnpEff impacts to include
+    // numbers indicate the order of strength of impacts
+    // use 0 if the impact is to be excluded
     snpEffImpacts: {
-        'HIGH': true,
-        'MODERATE': true,
-        'MODIFIER': true
+        'HIGH': 5,
+        'MODERATE': 4,
+        'MODIFIER': 3,
+        'LOW': 0
     },
 
     // which info fields to output from the vcf if outputWithGeneScores is set
@@ -39,7 +42,6 @@ module.exports = {
         'SNPEFF_GENE_BIOTYPE',
         'SNPEFF_EFFECT',
         'SNPEFF_FUNCTIONAL_CLASS',
-        'SNPEFF_IMPACT',
         'SNPEFF_CODON_CHANGE',
         'SNPEFF_AMINO_ACID_CHANGE'
     ]

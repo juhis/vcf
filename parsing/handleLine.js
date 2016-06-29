@@ -3,13 +3,15 @@
 const _ = require('lodash'),
       
       getScore = require('./getScore.js'),
+      getImpact = require('./getImpact.js'),
 
       filterGenotype        = require('../filters/genotype.js'),
       filterExAC            = require('../filters/exac.js'),
       filterSnpEffImpact    = require('../filters/snpEffImpact.js'),
       filterPrioritizedGene = require('../filters/prioritizedGene.js');
 
-var nLine = 0;
+var nLineRead = 0;
+var nLineWritten = 0;
 
 function getInfoMap(infoFields) {
 
@@ -32,8 +34,8 @@ function getInfoMap(infoFields) {
 // if config.outputWithGeneScores is set, prints a tab-delimited line with parts of the vcf plus gene score(s)
 module.exports = function(config, genes, line) {
 
-    if (++nLine % 100000 === 0) {
-        console.error(`${new Date()}\t${nLine} lines processed`);
+    if (++nLineRead % 100000 === 0) {
+        console.error(`${new Date()}\t${nLineRead} lines processed`);
     }
     
     if (line.startsWith('#')) {
@@ -50,7 +52,7 @@ module.exports = function(config, genes, line) {
     const split = line.split(/\t/);
     
     if (split.length !== 10) {
-        return console.error(`line ${nLine}: expected 10 tab-separated fields`);
+        return console.error(`line ${nLineRead}: expected 10 tab-separated fields`);
     }
 
     const genotypeStr = split[9].split(/:/)[0];
@@ -58,40 +60,61 @@ module.exports = function(config, genes, line) {
     // filter according to config
     if ((config.filters.presentVariant && !filterGenotype(genotypeStr))
         || (config.filters.snpEffImpact && !filterSnpEffImpact(line, config.snpEffImpacts))
-        || (config.filters.prioritizedGene && !filterPrioritizedGene(line, nLine, genes.ensgs))) {
+        || (config.filters.prioritizedGene && !filterPrioritizedGene(line, nLineRead, genes.ensgs))) {
         return;
     }
 
     //TODO get column number from file
     const infoMap = getInfoMap(split[7].split(/;/));
-        
+
     // filter on exac allele frequency
     if (config.filters.exac) {
     
         if (infoMap['EXAC_AF'] === undefined) {
-            return console.error(`line ${nLine}: did not find "EXAC_AF" field from the info column`);
+            return console.error(`line ${nLineRead}: did not find "EXAC_AF" field from the info column`);
         }
         
         const afs = infoMap['EXAC_AF'].split(/,/);
-        if (!filterExAC(genotypeStr, afs, config.exacMaf, nLine)) {
+        if (!filterExAC(genotypeStr, afs, config.exacMaf, nLineRead)) {
             return;
         }
     }
 
     // output in a nicer format if gene scores are included
     if (config.outputWithGeneScores) {
+
+        if (nLineWritten === 0) {
+            
+            // TODO get headers from vcf
+            const header = _
+                  .flatten(['CHROM',
+                            'POS',
+                            'ID',
+                            'REF',
+                            'ALT',
+                            'GENOTYPE',
+                            'GENE_SCORE',
+                            'IMPACT',
+                            config.outputInfoFields])
+                  .join('\t');
+            
+            console.log(header);
+        }
         
-        const score = getScore(genes.scores, line, nLine);
+        const impact = getImpact(line, config.snpEffImpacts);
+        const score = getScore(genes.scores, line, nLineRead);
         const infoValues = _.map(config.outputInfoFields, field => infoMap[field] || 'NA');
 
         const outLine = _
             .flatten([split.slice(0,5),
                       genotypeStr,
                       score,
+                      impact,
                       infoValues])
             .join('\t');
         
         console.log(outLine);
+        nLineWritten++;
         
     } else {
         
@@ -99,6 +122,7 @@ module.exports = function(config, genes, line) {
         // we celebrate this by printing the variant to standard output
         // and by going to the koffer for a lekker biertje
         console.log(line);
+        nLineWritten++;
     }
 
 };

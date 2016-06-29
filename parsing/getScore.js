@@ -16,8 +16,8 @@ module.exports = (scores, line, nLine) => {
         
         const fields = matches[1].split('|');
         
-        if (fields.length < 5) {
-            return console.error(`line ${nLine}: unexpected format, wanted at least 5 EFFECT fields separated by |`);
+        if (fields.length < ENSG_INDEX_IN_EFFECT_FIELD + 1) {
+            return console.error(`line ${nLine}: unexpected format, wanted at least ${ENSG_INDEX_IN_EFFECT_FIELD + 1} EFFECT fields separated by |`);
         }
         
         const ids = fields[ENSG_INDEX_IN_EFFECT_FIELD].split('-');

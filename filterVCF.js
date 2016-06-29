@@ -23,11 +23,13 @@ if (err !== undefined) {
 console.error('configuration:');
 console.error(JSON.stringify(config, null, 4));
 
-const genes  = readGenes(config.geneScoreFile);
+const genes = readGenes(config.geneScoreFile);
 
 require('readline').createInterface({
     
     input: fs.createReadStream(config.vcf, 'utf8'),
     ouput: process.stdout
     
-}).on('line', handleLine.bind(null, config, genes));
+})
+    .on('line', handleLine.bind(null, config, genes))
+    .on('close', () => { console.error('done'); });
