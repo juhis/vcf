@@ -12,7 +12,6 @@ if (process.argv.length !== 3) {
     process.exit(-1);
 }
 
-/// TODO validate config!!
 const config = require(`./${process.argv[2]}`);
 const err = validateConfig(config);
 if (err !== undefined) {
@@ -23,7 +22,9 @@ if (err !== undefined) {
 console.error('configuration:');
 console.error(JSON.stringify(config, null, 4));
 
-const genes = readGenes(config.geneScoreFile);
+const genes = (config.outputWithGeneScores || config.filters.prioritizedGene)
+      ? readGenes(config.geneScoreFile)
+      : null;
 
 require('readline').createInterface({
     

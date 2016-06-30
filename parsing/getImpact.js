@@ -1,18 +1,17 @@
 'use strict';
 
 const _ = require('lodash'),
-      RE_IMPACT = /SNPEFF_IMPACT=([A-Z]+)/,
-      RE_EFFECT = /;EFFECT=(.*?);/,
-      // TODO read from vcf
-      IMPACT_INDEX_IN_EFFECT_FIELD = 3;
+      RE_IMPACT = /SNPEFF_IMPACT=([A-Z]+)/;
 
-module.exports = (line, impacts) => {
+// returns SnpEff impact from SNPEFF_IMPACT or EFFECT/ANN field
+// if both exist, returns the bigger impact
+module.exports = (line, reAnn, impactIndex, impacts) => {
     
     var matches = line.match(RE_IMPACT);
     const impact1 = matches && impacts[matches[1]] > 0 && matches[1];
 
-    matches = line.match(RE_EFFECT);
-    const impact2 = matches && impacts[matches[1]] > 0 && matches[1].split('|')[IMPACT_INDEX_IN_EFFECT_FIELD];
+    matches = line.match(reAnn);
+    const impact2 = matches && impacts[matches[1].split('|')[impactIndex]] > 0 && matches[1].split('|')[impactIndex];
 
     // return bigger impact
     if (impact1 && impact2) {

@@ -10,8 +10,53 @@ const _ = require('lodash'),
       filterSnpEffImpact    = require('../filters/snpEffImpact.js'),
       filterPrioritizedGene = require('../filters/prioritizedGene.js');
 
-var nLineRead = 0;
-var nLineWritten = 0;
+var nLineRead = 0,
+    nLineWritten = 0;
+
+var headers = null,
+    headerHash = null,
+    effectFieldHash = null;
+
+var reAnn = null;
+
+function setHeaders(line) {
+
+    headers = line.split(/\t/);
+    headerHash = {};
+    _.forEach(headers, (field, i) => {
+        headers[i] = field.replace(/#/, '');
+        headerHash[headers[i]] = i;
+    });
+}
+
+function setEffectFieldIndices(line, config) {
+
+    effectFieldHash = {};
+    
+    const matches = line.match(/'(.*?)'/);
+    if (!matches) {
+        return console.error(`Unexpected EFFECT/ANN field format: ${line}`);
+    }
+    
+    const annotations = _
+          .map(matches[1].split(' | '), annotation => (
+              annotation.toLowerCase()
+          ));
+    if (annotations.length < 2) {
+        return console.error(`Unexpected EFFECT/ANN field format: ${line}`);
+    }
+    
+    effectFieldHash['impact'] = annotations.indexOf('annotation_impact');
+    if (effectFieldHash['impact'] < 0) {
+        effectFieldHash['impact'] = annotations.indexOf('putative_impact');
+    }
+
+    effectFieldHash['geneId'] = annotations.indexOf('gene_id');
+
+    if ((config.outputWithGeneScores || config.filters.prioritizedGene) && effectFieldHash['geneId'] < 0) {
+        return console.error(`Expected to find a "gene_id" annotation field: ${line}`);
+    }
+}
 
 function getInfoMap(infoFields) {
 
@@ -37,8 +82,21 @@ module.exports = function(config, genes, line) {
     if (++nLineRead % 100000 === 0) {
         console.error(`${new Date()}\t${nLineRead} lines processed`);
     }
-    
+
     if (line.startsWith('#')) {
+        
+        if (line.startsWith('#CHROM')) {
+            setHeaders(line);
+        }
+
+        if (line.startsWith('##INFO=<ID=ANN,')) {
+            reAnn = /;ANN=(.*?);/;
+            setEffectFieldIndices(line, config);
+        } else if (line.startsWith('##INFO=<ID=EFFECT,')) {
+            reAnn = /;EFFECT=(.*?);/;
+            setEffectFieldIndices(line, config);
+        }
+        
         return config.outputWithGeneScores
             ? null
             : console.log(line); // keep comment lines in when outputting vcf
@@ -51,21 +109,20 @@ module.exports = function(config, genes, line) {
     
     const split = line.split(/\t/);
     
-    if (split.length !== 10) {
-        return console.error(`line ${nLineRead}: expected 10 tab-separated fields`);
+    if (split.length !== headers.length) {
+        return console.error(`line ${nLineRead}: expected ${headers.length} tab-separated fields`);
     }
 
     const genotypeStr = split[9].split(/:/)[0];
 
     // filter according to config
     if ((config.filters.presentVariant && !filterGenotype(genotypeStr))
-        || (config.filters.snpEffImpact && !filterSnpEffImpact(line, config.snpEffImpacts))
-        || (config.filters.prioritizedGene && !filterPrioritizedGene(line, nLineRead, genes.ensgs))) {
+        || (config.filters.snpEffImpact && !filterSnpEffImpact(line, reAnn, effectFieldHash['impact'], config.snpEffImpacts))
+        || (config.filters.prioritizedGene && !filterPrioritizedGene(line, nLineRead, reAnn, effectFieldHash['geneId'], genes))) {
         return;
     }
 
-    //TODO get column number from file
-    const infoMap = getInfoMap(split[7].split(/;/));
+    const infoMap = getInfoMap(split[headerHash['INFO']].split(/;/));
 
     // filter on exac allele frequency
     if (config.filters.exac) {
@@ -85,24 +142,19 @@ module.exports = function(config, genes, line) {
 
         if (nLineWritten === 0) {
             
-            // TODO get headers from vcf
-            const header = _
-                  .flatten(['CHROM',
-                            'POS',
-                            'ID',
-                            'REF',
-                            'ALT',
+            const headerLine = _
+                  .flatten([headers.slice(0,5),
                             'GENOTYPE',
                             'GENE_SCORE',
                             'IMPACT',
                             config.outputInfoFields])
                   .join('\t');
             
-            console.log(header);
+            console.log(headerLine);
         }
         
-        const impact = getImpact(line, config.snpEffImpacts);
-        const score = getScore(genes.scores, line, nLineRead);
+        const impact = getImpact(line, reAnn, effectFieldHash['impact'], config.snpEffImpacts);
+        const score = getScore(genes.scores, line, nLineRead, reAnn, effectFieldHash['geneId']);
         const infoValues = _.map(config.outputInfoFields, field => infoMap[field] || 'NA');
 
         const outLine = _
