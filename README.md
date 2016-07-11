@@ -7,9 +7,17 @@ VCF filtering and gene prioritization
 npm install
 ```
 
+This will install dependencies (lodash).
+
 ### Configuration
 
 See config/config.js
+
+**vcf** points to the VCF file to be filtered
+
+**geneScoreFile** (optional) points to a tab-delimited gene score file
+
+**individual** (optional) is the index of the individual to filter on in the VCF file
 
 A VCF file augmented with SnpEff and ExAC annotations is currently required as input.
 
