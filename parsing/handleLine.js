@@ -13,7 +13,8 @@ const _ = require('lodash'),
 var nLineRead = 0,
     nLineWritten = 0;
 
-var headers = null,
+var nIndividuals = 0,
+    headers = null,
     headerHash = null,
     effectFieldHash = null;
 
@@ -27,6 +28,8 @@ function setHeaders(line) {
         headers[i] = field.replace(/#/, '');
         headerHash[headers[i]] = i;
     });
+    
+    nIndividuals = headers.length - 9;
 }
 
 function setEffectFieldIndices(line, config) {
@@ -112,9 +115,9 @@ module.exports = function(config, genes, line) {
     if (split.length !== headers.length) {
         return console.error(`line ${nLineRead}: expected ${headers.length} tab-separated fields`);
     }
-
-    const genotypeStr = split[9].split(/:/)[0];
-
+    
+    const genotypeStr = split[8 + config.individual].split(/:/)[0];
+    
     // filter according to config
     if ((config.filters.presentVariant && !filterGenotype(genotypeStr))
         || (config.filters.snpEffImpact && !filterSnpEffImpact(line, reAnn, effectFieldHash['impact'], config.snpEffImpacts))

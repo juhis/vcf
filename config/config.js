@@ -7,6 +7,10 @@ module.exports = {
     // path to the tab-delimited gene score file
     geneScoreFile: './genes.txt',
 
+    // 1-based index of the individual to process
+    // if not set, will use the first individual in the vcf file
+    individual: 1,
+
     // if set, will output a tab-delimited file with parts of the vcf and gene scores
     // if not set, will output the filtered vcf
     outputWithGeneScores: true,

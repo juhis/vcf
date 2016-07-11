@@ -13,6 +13,10 @@ if (process.argv.length !== 3) {
 }
 
 const config = require(`./${process.argv[2]}`);
+if (config.individual === undefined) {
+    config.individual = 1;
+}
+
 const err = validateConfig(config);
 if (err !== undefined) {
     console.error(err);
